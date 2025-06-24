@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Select Device</title>
+  <style>
+    body {
+      background-color: #ffe6f0;
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 50px;
+    }
+    select, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Select Your Phone Model</h1>
+  <form id="phoneForm">
+    <label for="model">Choose Model:</label>
+    <select id="model" name="model">
+      <optgroup label="iPhone">
+        <option value="iphone8">iPhone 8 / SE</option>
+        <option value="iphone14">iPhone 11</option>
+        <option value="iphone14">iPhone 12</option>
+        <option value="iphone14">iPhone 13</option>
+        <option value="iphone14">iPhone 14</option>
+        <option value="iphone14">iPhone 15</option>
+      </optgroup>
+      <optgroup label="Samsung Galaxy">
+        <option value="galaxyS">Galaxy S23</option>
+        <option value="galaxyS">Galaxy S24</option>
+        <option value="galaxyS">Galaxy S25</option>
+      </optgroup>
+    </select>
+    <br/>
+    <button type="submit">Next</button>
+  </form>
+
+  <script>
+    document.getElementById("phoneForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const model = document.getElementById("model").value;
+      window.location.href = `customizer.html?model=${model}`;
+    });
+  </script>
+</body>
+</html>
