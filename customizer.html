@@ -62,7 +62,7 @@
       background: transparent !important;
       border: none !important;
     }
-    .charm-menu, .basket {
+    .charm-menu {
       background: white;
       border-radius: 20px;
       padding: 10px;
@@ -79,13 +79,6 @@
       border-radius: 10px;
       padding: 5px 10px;
       cursor: pointer;
-    }
-    .text-tool-btn {
-      font-size: 24px;
-      background-color: #f9f28b;
-      border-radius: 15px;
-      border: none;
-      padding: 10px;
     }
     #upload {
       background-color: #a8e6a3;
@@ -127,24 +120,16 @@
       <div class="charm-menu" id="charm-menu">
         <div class="charm-button" data-emoji="🌸">🌸</div>
         <div class="charm-button" data-emoji="🎀">🎀</div>
+        <div class="charm-button" data-emoji="✨">✨</div>
+        <div class="charm-button" data-emoji="💖">💖</div>
+        <div class="charm-button" data-emoji="🧸">🧸</div>
         <div class="charm-button" data-emoji="🍓">🍓</div>
         <div class="charm-button" data-emoji="🐰">🐰</div>
-        <div class="charm-button" data-emoji="💛">💛</div>
-      </div>
-      <button class="text-tool-btn" id="add-text">T</button>
-      <div class="basket" id="basket">
-        <div class="charm-button" data-emoji="🔵">🔵</div>
-        <div class="charm-button" data-emoji="🟣">🟣</div>
-        <div class="charm-button" data-emoji="🟢">🟢</div>
       </div>
     </div>
   </div>
 
-  <div id="final-view">
-    <h2>Your Final Design</h2>
-    <div class="phone-case" id="final-case"></div>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const model = params.get("model");
@@ -161,12 +146,34 @@
 
     const upload = document.getElementById("upload");
     const resetBtn = document.getElementById("reset");
-    const addTextBtn = document.getElementById("add-text");
     const doneBtn = document.getElementById("done");
-    const finalCase = document.getElementById("final-case");
-    const finalView = document.getElementById("final-view");
 
-    let resizing = false;
+    function makeTouchDraggable(el) {
+      let offsetX, offsetY;
+
+      el.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+
+        const rect = el.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        function moveAt(event) {
+          const containerRect = caseDiv.getBoundingClientRect();
+          el.style.left = (event.clientX - containerRect.left - offsetX) + "px";
+          el.style.top = (event.clientY - containerRect.top - offsetY) + "px";
+        }
+
+        function stopDrag() {
+          document.removeEventListener("pointermove", moveAt);
+          document.removeEventListener("pointerup", stopDrag);
+        }
+
+        document.addEventListener("pointermove", moveAt);
+        document.addEventListener("pointerup", stopDrag);
+      });
+    }
 
     upload.addEventListener("change", function (e) {
       const file = e.target.files[0];
@@ -176,223 +183,59 @@
           const img = document.createElement("img");
           img.src = reader.result;
           img.className = "draggable-img";
+          img.style.position = "absolute";
+          img.style.width = "150px";
           img.style.top = "100px";
           img.style.left = "80px";
-          img.style.width = "150px";
+
           caseDiv.appendChild(img);
-          makeTouchDraggable(img, true);
+          makeTouchDraggable(img);
         };
         reader.readAsDataURL(file);
       }
+    });
+
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("pointerdown", e => {
+        e.preventDefault();
+
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.textContent = button.dataset.emoji;
+        charm.style.position = "absolute";
+        charm.style.fontSize = "30px";
+        charm.style.width = "40px";
+        charm.style.height = "40px";
+
+        const containerRect = caseDiv.getBoundingClientRect();
+        charm.style.left = (e.clientX - containerRect.left - 20) + "px";
+        charm.style.top = (e.clientY - containerRect.top - 20) + "px";
+
+        caseDiv.appendChild(charm);
+        makeTouchDraggable(charm);
+
+        charm.dispatchEvent(new PointerEvent("pointerdown", {
+          bubbles: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          pointerId: e.pointerId,
+          pointerType: e.pointerType
+        }));
+      });
     });
 
     resetBtn.addEventListener("click", () => {
       caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
     });
 
-    addTextBtn.addEventListener("click", () => {
-      const bubble = document.createElement("div");
-      bubble.className = "text-bubble";
-      bubble.contentEditable = true;
-      bubble.style.left = "80px";
-      bubble.style.top = "100px";
-      caseDiv.appendChild(bubble);
-      bubble.focus();
-      makeTouchDraggable(bubble);
-    });
-
-    document.querySelectorAll(".charm-button").forEach(button => {
-      button.addEventListener("click", () => {
-        const emoji = button.dataset.emoji;
-        const charm = document.createElement("div");
-        charm.className = "charm";
-        charm.innerText = emoji;
-        charm.style.left = "100px";
-        charm.style.top = "100px";
-        caseDiv.appendChild(charm);
-        makeTouchDraggable(charm);
-      });
-    });
-
-    function makeTouchDraggable(el, isResizable = false) {
-      let offsetX = 0;
-      let offsetY = 0;
-      let lastTap = 0;
-      let startDist = 0;
-      let initialScale = 1;
-
-      el.addEventListener("touchstart", (e) => {
-        if (isResizable && e.touches.length === 2) {
-          resizing = true;
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          startDist = Math.sqrt(dx * dx + dy * dy);
-          initialScale = parseFloat(el.style.transform.replace(/[^\d.]/g, '')) || 1;
-          return;
-        }
-
-        const now = new Date().getTime();
-        if (now - lastTap < 300 && !resizing) {
-          el.remove();
-          return;
-        }
-        lastTap = now;
-
-        if (e.touches.length === 1) {
-          const touch = e.touches[0];
-          const rect = el.getBoundingClientRect();
-          const parentRect = caseDiv.getBoundingClientRect();
-          offsetX = touch.clientX - rect.left;
-          offsetY = touch.clientY - rect.top;
-
-          function moveTouch(moveEvent) {
-            const moveTouch = moveEvent.touches[0];
-            let x = moveTouch.clientX - parentRect.left - offsetX;
-            let y = moveTouch.clientY - parentRect.top - offsetY;
-
-            if (x < 0) x = 0;
-            if (y < 0) y = 0;
-            if (x > parentRect.width - el.offsetWidth) x = parentRect.width - el.offsetWidth;
-            if (y > parentRect.height - el.offsetHeight) y = parentRect.height - el.offsetHeight;
-
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
-          }
-
-          function endTouch() {
-            document.removeEventListener("touchmove", moveTouch);
-            document.removeEventListener("touchend", endTouch);
-            resizing = false;
-          }
-
-          document.addEventListener("touchmove", moveTouch);
-          document.addEventListener("touchend", endTouch);
-        }
-      });
-
-      el.addEventListener("touchmove", (e) => {
-        if (isResizable && e.touches.length === 2) {
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const scale = dist / startDist * initialScale;
-          el.style.transform = `scale(${scale})`;
-        }
-      });
-    }
-
     doneBtn.addEventListener("click", () => {
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script>
-const params = new URLSearchParams(window.location.search);
-const model = params.get("model");
-const caseDiv = document.getElementById("case");
-const caseImages = {
-  iphone8: "cases/iphone8.png",
-  iphone14: "cases/iphone14.png",
-  galaxyS: "cases/galaxyS.png"
-};
-
-if (model && caseImages[model]) {
-  caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
-}
-
-const upload = document.getElementById("upload");
-const resetBtn = document.getElementById("reset");
-const addTextBtn = document.getElementById("add-text");
-const doneBtn = document.getElementById("done");
-const finalCase = document.getElementById("final-case");
-const finalView = document.getElementById("final-view");
-
-// Dragging function
-function makeTouchDraggable(el, center = false) {
-  let offsetX, offsetY;
-
-  el.addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    el.setPointerCapture(e.pointerId);
-
-    const rect = el.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
-
-    function moveAt(event) {
-      const containerRect = caseDiv.getBoundingClientRect();
-      el.style.left = (event.clientX - containerRect.left - offsetX) + "px";
-      el.style.top = (event.clientY - containerRect.top - offsetY) + "px";
-    }
-
-    function stopDrag() {
-      document.removeEventListener("pointermove", moveAt);
-      document.removeEventListener("pointerup", stopDrag);
-    }
-
-    document.addEventListener("pointermove", moveAt);
-    document.addEventListener("pointerup", stopDrag);
-  });
-}
-
-// Upload image and let user place it by clicking
-upload.addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "draggable-img";
-      img.style.position = "absolute";
-      img.style.width = "150px";
-
-      caseDiv.onclick = function (clickEvent) {
-        const rect = caseDiv.getBoundingClientRect();
-        img.style.top = (clickEvent.clientY - rect.top - 50) + "px";
-        img.style.left = (clickEvent.clientX - rect.left - 50) + "px";
-        caseDiv.appendChild(img);
-        makeTouchDraggable(img, true);
-        caseDiv.onclick = null;
-      };
-
-      alert("Click on the phone case to place your image.");
-    };
-    reader.readAsDataURL(file);
-  }
-});
-
-// Charm click → add to phone case where clicked
-document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("click", () => {
-    const charm = document.createElement("div");
-    charm.className = "charm";
-    charm.textContent = button.dataset.emoji;
-    charm.style.position = "absolute";
-
-    caseDiv.onclick = function (clickEvent) {
-      const rect = caseDiv.getBoundingClientRect();
-      charm.style.top = (clickEvent.clientY - rect.top - 20) + "px";
-      charm.style.left = (clickEvent.clientX - rect.left - 20) + "px";
-      caseDiv.appendChild(charm);
-      makeTouchDraggable(charm, true);
-      caseDiv.onclick = null;
-    };
-
-    alert("Click on the phone case to place the charm.");
-  });
-});
-
-resetBtn.addEventListener("click", () => {
-  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-});
-
-doneBtn.addEventListener("click", () => {
-  html2canvas(caseDiv).then(canvas => {
-    const link = document.createElement("a");
-    link.download = "my-custom-phone.png";
-    link.href = canvas.toDataURL();
-    link.click();
-  });
-});
-</script>
-
+      html2canvas(caseDiv).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "my-custom-phone.png";
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+  </script>
 </body>
 </html>
