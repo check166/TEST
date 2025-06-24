@@ -282,29 +282,115 @@
     }
 
     doneBtn.addEventListener("click", () => {
-      finalCase.innerHTML = caseDiv.innerHTML;
-      finalView.style.display = "block";
-      document.querySelector(".layout").style.display = "none";
-    });
-  </script>
-
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const doneButton = document.getElementById("doneButton");
-  if (doneButton) {
-    doneButton.addEventListener("click", function () {
-      const previewArea = document.querySelector(".phone-case");
-      if (!previewArea) return;
+const params = new URLSearchParams(window.location.search);
+const model = params.get("model");
+const caseDiv = document.getElementById("case");
+const caseImages = {
+  iphone8: "cases/iphone8.png",
+  iphone14: "cases/iphone14.png",
+  galaxyS: "cases/galaxyS.png"
+};
 
-      html2canvas(previewArea).then(canvas => {
-        const link = document.createElement("a");
-        link.download = "my-custom-phone.png";
-        link.href = canvas.toDataURL();
-        link.click();
-      });
-    });
+if (model && caseImages[model]) {
+  caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
+}
+
+const upload = document.getElementById("upload");
+const resetBtn = document.getElementById("reset");
+const addTextBtn = document.getElementById("add-text");
+const doneBtn = document.getElementById("done");
+const finalCase = document.getElementById("final-case");
+const finalView = document.getElementById("final-view");
+
+// Dragging function
+function makeTouchDraggable(el, center = false) {
+  let offsetX, offsetY;
+
+  el.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+
+    const rect = el.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    function moveAt(event) {
+      const containerRect = caseDiv.getBoundingClientRect();
+      el.style.left = (event.clientX - containerRect.left - offsetX) + "px";
+      el.style.top = (event.clientY - containerRect.top - offsetY) + "px";
+    }
+
+    function stopDrag() {
+      document.removeEventListener("pointermove", moveAt);
+      document.removeEventListener("pointerup", stopDrag);
+    }
+
+    document.addEventListener("pointermove", moveAt);
+    document.addEventListener("pointerup", stopDrag);
+  });
+}
+
+// Upload image and let user place it by clicking
+upload.addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const img = document.createElement("img");
+      img.src = reader.result;
+      img.className = "draggable-img";
+      img.style.position = "absolute";
+      img.style.width = "150px";
+
+      caseDiv.onclick = function (clickEvent) {
+        const rect = caseDiv.getBoundingClientRect();
+        img.style.top = (clickEvent.clientY - rect.top - 50) + "px";
+        img.style.left = (clickEvent.clientX - rect.left - 50) + "px";
+        caseDiv.appendChild(img);
+        makeTouchDraggable(img, true);
+        caseDiv.onclick = null;
+      };
+
+      alert("Click on the phone case to place your image.");
+    };
+    reader.readAsDataURL(file);
   }
+});
+
+// Charm click → add to phone case where clicked
+document.querySelectorAll(".charm-button").forEach(button => {
+  button.addEventListener("click", () => {
+    const charm = document.createElement("div");
+    charm.className = "charm";
+    charm.textContent = button.dataset.emoji;
+    charm.style.position = "absolute";
+
+    caseDiv.onclick = function (clickEvent) {
+      const rect = caseDiv.getBoundingClientRect();
+      charm.style.top = (clickEvent.clientY - rect.top - 20) + "px";
+      charm.style.left = (clickEvent.clientX - rect.left - 20) + "px";
+      caseDiv.appendChild(charm);
+      makeTouchDraggable(charm, true);
+      caseDiv.onclick = null;
+    };
+
+    alert("Click on the phone case to place the charm.");
+  });
+});
+
+resetBtn.addEventListener("click", () => {
+  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+});
+
+doneBtn.addEventListener("click", () => {
+  html2canvas(caseDiv).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "my-custom-phone.png";
+    link.href = canvas.toDataURL();
+    link.click();
+  });
 });
 </script>
 
