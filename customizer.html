@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Customize Your Phone Case</title>
   <style>
-    body 
+    body {
       background-color: #ffe6f0;
       font-family: sans-serif;
       text-align: center;
@@ -201,11 +201,11 @@
         charm.style.left = `130px`;
         charm.style.top = `230px`;
         caseDiv.appendChild(charm);
-        makeTouchDraggable(charm);
+        makeTouchDraggable(charm, false, button);
       });
     });
 
-    function makeTouchDraggable(el, isResizable = false) {
+    function makeTouchDraggable(el, isResizable = false, originButton = null) {
       let offsetX = 0;
       let offsetY = 0;
       let startDist = 0;
@@ -228,8 +228,8 @@
 
         function moveTouch(moveEvent) {
           const moveTouch = moveEvent.touches[0];
-          let x = moveTouch.clientX - parentRect.left - offsetX;
-          let y = moveTouch.clientY - parentRect.top - offsetY;
+          const x = moveTouch.clientX - parentRect.left - offsetX;
+          const y = moveTouch.clientY - parentRect.top - offsetY;
           el.style.left = `${x}px`;
           el.style.top = `${y}px`;
         }
