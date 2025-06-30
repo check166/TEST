@@ -47,7 +47,6 @@
       height: 40px;
       user-select: none;
       font-size: 30px;
-      transition: transform 0.3s ease;
     }
     .text-bubble {
       background: white;
@@ -123,23 +122,14 @@
       <div class="charm-menu" id="charm-menu">
         <div class="charm-button" data-emoji="🌸">🌸</div>
         <div class="charm-button" data-emoji="🎀">🎀</div>
-        <div class="charm-button" data-emoji="🍓">🍓</div>
-        <div class="charm-button" data-emoji="🐰">🐰</div>
-        <div class="charm-button" data-emoji="💛">💛</div>
       </div>
       <button class="text-tool-btn" id="add-text">T</button>
-      <div class="basket" id="basket">
-        <div class="charm-button" data-emoji="🔵">🔵</div>
-        <div class="charm-button" data-emoji="🟣">🟣</div>
-        <div class="charm-button" data-emoji="🟢">🟢</div>
-      </div>
     </div>
   </div>
   <div id="final-view">
     <h2>Your Final Design</h2>
     <div class="phone-case" id="final-case"></div>
   </div>
-  <canvas id="case-canvas" style="display:none;"></canvas>
   <script>
     const caseDiv = document.getElementById("case");
     const upload = document.getElementById("upload");
@@ -159,7 +149,6 @@ if (model && caseImages[model]) {
   caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
 }
 
-// Upload image
 upload.addEventListener("change", function (e) {
   const file = e.target.files[0];
   if (file) {
@@ -172,18 +161,16 @@ upload.addEventListener("change", function (e) {
       img.style.left = "80px";
       img.style.width = "150px";
       caseDiv.appendChild(img);
-      makeTouchDraggable(img);
+      makeDraggable(img);
     };
     reader.readAsDataURL(file);
   }
 });
 
-// Reset
 resetBtn.addEventListener("click", () => {
   caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
 });
 
-// Add text
 addTextBtn.addEventListener("click", () => {
   const bubble = document.createElement("div");
   bubble.className = "text-bubble";
@@ -192,30 +179,29 @@ addTextBtn.addEventListener("click", () => {
   bubble.style.top = "100px";
   caseDiv.appendChild(bubble);
   bubble.focus();
-  makeTouchDraggable(bubble);
+  makeDraggable(bubble);
 });
 
-// Handle charm creation
 document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("touchstart", function(e) {
+  button.addEventListener("click", (e) => {
     const emoji = button.dataset.emoji;
     const charm = document.createElement("div");
     charm.className = "charm";
     charm.innerText = emoji;
-    charm.style.left = `${e.touches[0].clientX - caseDiv.getBoundingClientRect().left - 20}px`;
-    charm.style.top = `${e.touches[0].clientY - caseDiv.getBoundingClientRect().top - 20}px`;
+    charm.style.left = "100px";
+    charm.style.top = "100px";
     caseDiv.appendChild(charm);
-    makeTouchDraggable(charm);
+    makeDraggable(charm);
   });
 });
 
-// Draggable logic
-function makeTouchDraggable(el) {
+function makeDraggable(el) {
   let offsetX = 0;
   let offsetY = 0;
+  let isDragging = false;
   let lastTap = 0;
 
-  el.addEventListener("touchstart", function(e) {
+  el.addEventListener("touchstart", (e) => {
     const now = new Date().getTime();
     if (now - lastTap < 300) {
       el.remove();
@@ -223,6 +209,7 @@ function makeTouchDraggable(el) {
     }
     lastTap = now;
 
+    isDragging = true;
     const touch = e.touches[0];
     const rect = el.getBoundingClientRect();
     const parentRect = caseDiv.getBoundingClientRect();
@@ -230,15 +217,20 @@ function makeTouchDraggable(el) {
     offsetY = touch.clientY - rect.top;
 
     function moveTouch(moveEvent) {
+      if (!isDragging) return;
       const moveTouch = moveEvent.touches[0];
       let x = moveTouch.clientX - parentRect.left - offsetX;
       let y = moveTouch.clientY - parentRect.top - offsetY;
+
+      x = Math.max(0, Math.min(x, caseDiv.clientWidth - el.clientWidth));
+      y = Math.max(0, Math.min(y, caseDiv.clientHeight - el.clientHeight));
 
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
     }
 
     function endTouch() {
+      isDragging = false;
       document.removeEventListener("touchmove", moveTouch);
       document.removeEventListener("touchend", endTouch);
     }
