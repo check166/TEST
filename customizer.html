@@ -57,7 +57,11 @@
       min-width: 60px;
       min-height: 30px;
     }
-    .charm-menu, .basket {
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
+    }
+    .charm-menu {
       background: white;
       border-radius: 20px;
       padding: 10px;
@@ -67,12 +71,12 @@
       justify-content: center;
       margin-bottom: 10px;
     }
-    .charm-button {
-      font-size: 24px;
+    .charm-source {
+      font-size: 30px;
       background: #ffe0ed;
       border: none;
       border-radius: 10px;
-      padding: 5px 10px;
+      padding: 10px;
       cursor: pointer;
     }
     .text-tool-btn {
@@ -119,9 +123,8 @@
       </div>
     </div>
     <div class="right-panel">
-      <div class="charm-menu" id="charm-menu">
-        <div class="charm-button" data-emoji="🌸">🌸</div>
-        <div class="charm-button" data-emoji="🎀">🎀</div>
+      <div class="charm-menu">
+        <div class="charm-source" data-emoji="🌸">🌸</div>
       </div>
       <button class="text-tool-btn" id="add-text">T</button>
     </div>
@@ -132,24 +135,8 @@
   </div>
   <script>
     const caseDiv = document.getElementById("case");
-    const upload = document.getElementById("upload");
-    const resetBtn = document.getElementById("reset");
-    const addTextBtn = document.getElementById("add-text");
-    const doneBtn = document.getElementById("done");
     const finalCase = document.getElementById("final-case");
-    const finalView = document.getElementById("final-view");// Load phone case background
-const params = new URLSearchParams(window.location.search);
-const model = params.get("model");
-const caseImages = {
-  iphone8: "iphone8.png",
-  iphone14: "iphone14.png",
-  galaxyS: "galaxyS.png"
-};
-if (model && caseImages[model]) {
-  caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
-}
-
-upload.addEventListener("change", function (e) {
+    const finalView = document.getElementById("final-view");document.getElementById("upload").addEventListener("change", function (e) {
   const file = e.target.files[0];
   if (file) {
     const reader = new FileReader();
@@ -167,11 +154,11 @@ upload.addEventListener("change", function (e) {
   }
 });
 
-resetBtn.addEventListener("click", () => {
+document.getElementById("reset").addEventListener("click", () => {
   caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
 });
 
-addTextBtn.addEventListener("click", () => {
+document.getElementById("add-text").addEventListener("click", () => {
   const bubble = document.createElement("div");
   bubble.className = "text-bubble";
   bubble.contentEditable = true;
@@ -182,57 +169,56 @@ addTextBtn.addEventListener("click", () => {
   makeDraggable(bubble);
 });
 
-document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("click", (e) => {
+document.querySelectorAll(".charm-source").forEach(button => {
+  button.addEventListener("touchstart", (e) => {
+    e.preventDefault();
     const emoji = button.dataset.emoji;
     const charm = document.createElement("div");
     charm.className = "charm";
     charm.innerText = emoji;
-    charm.style.left = "100px";
-    charm.style.top = "100px";
-    caseDiv.appendChild(charm);
-    makeDraggable(charm);
+    charm.style.position = "absolute";
+    charm.style.left = `${e.touches[0].clientX - 20}px`;
+    charm.style.top = `${e.touches[0].clientY - 20}px`;
+    document.body.appendChild(charm);
+    makeDraggable(charm, true);
   });
 });
 
-function makeDraggable(el) {
-  let offsetX = 0;
-  let offsetY = 0;
-  let isDragging = false;
-  let lastTap = 0;
+function makeDraggable(el, allowDropToCase = false) {
+  let offsetX = 0, offsetY = 0;
 
   el.addEventListener("touchstart", (e) => {
-    const now = new Date().getTime();
-    if (now - lastTap < 300) {
-      el.remove();
-      return;
-    }
-    lastTap = now;
-
-    isDragging = true;
     const touch = e.touches[0];
     const rect = el.getBoundingClientRect();
-    const parentRect = caseDiv.getBoundingClientRect();
     offsetX = touch.clientX - rect.left;
     offsetY = touch.clientY - rect.top;
 
     function moveTouch(moveEvent) {
-      if (!isDragging) return;
-      const moveTouch = moveEvent.touches[0];
-      let x = moveTouch.clientX - parentRect.left - offsetX;
-      let y = moveTouch.clientY - parentRect.top - offsetY;
-
-      x = Math.max(0, Math.min(x, caseDiv.clientWidth - el.clientWidth));
-      y = Math.max(0, Math.min(y, caseDiv.clientHeight - el.clientHeight));
-
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
+      const t = moveEvent.touches[0];
+      el.style.left = `${t.clientX - offsetX}px`;
+      el.style.top = `${t.clientY - offsetY}px`;
     }
 
     function endTouch() {
-      isDragging = false;
       document.removeEventListener("touchmove", moveTouch);
       document.removeEventListener("touchend", endTouch);
+      if (allowDropToCase) {
+        const caseRect = caseDiv.getBoundingClientRect();
+        const charmRect = el.getBoundingClientRect();
+        if (
+          charmRect.left < caseRect.right &&
+          charmRect.right > caseRect.left &&
+          charmRect.top < caseRect.bottom &&
+          charmRect.bottom > caseRect.top
+        ) {
+          const newCharm = el.cloneNode(true);
+          newCharm.style.left = `${charmRect.left - caseRect.left}px`;
+          newCharm.style.top = `${charmRect.top - caseRect.top}px`;
+          caseDiv.appendChild(newCharm);
+          makeDraggable(newCharm);
+        }
+        el.remove();
+      }
     }
 
     document.addEventListener("touchmove", moveTouch);
@@ -240,7 +226,7 @@ function makeDraggable(el) {
   });
 }
 
-doneBtn.addEventListener("click", () => {
+document.getElementById("done").addEventListener("click", () => {
   finalCase.innerHTML = caseDiv.innerHTML;
   finalView.style.display = "block";
   document.querySelector(".layout").style.display = "none";
