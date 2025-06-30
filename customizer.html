@@ -142,47 +142,79 @@
   <canvas id="case-canvas" style="display:none;"></canvas>
   <script>
     const caseDiv = document.getElementById("case");
-    const caseCanvas = document.getElementById("case-canvas");
-    const ctx = caseCanvas.getContext("2d");
-    const model = new URLSearchParams(window.location.search).get("model");
-    const caseImages = {
-      iphone8: "iphone8.png",
-      iphone14: "iphone14.png",
-      galaxyS: "galaxyS.png"
+    const upload = document.getElementById("upload");
+    const resetBtn = document.getElementById("reset");
+    const addTextBtn = document.getElementById("add-text");
+    const doneBtn = document.getElementById("done");
+    const finalCase = document.getElementById("final-case");
+    const finalView = document.getElementById("final-view");// Load phone case background
+const params = new URLSearchParams(window.location.search);
+const model = params.get("model");
+const caseImages = {
+  iphone8: "iphone8.png",
+  iphone14: "iphone14.png",
+  galaxyS: "galaxyS.png"
+};
+if (model && caseImages[model]) {
+  caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
+}
+
+// Upload image
+upload.addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const img = document.createElement("img");
+      img.src = reader.result;
+      img.className = "draggable-img";
+      img.style.top = "100px";
+      img.style.left = "80px";
+      img.style.width = "150px";
+      caseDiv.appendChild(img);
+      makeTouchDraggable(img);
     };
-    if (model && caseImages[model]) {
-      const bg = new Image();
-      bg.src = caseImages[model];
-      bg.onload = () => {
-        caseDiv.style.backgroundImage = `url('${bg.src}')`;
-        caseCanvas.width = bg.width;
-        caseCanvas.height = bg.height;
-        ctx.drawImage(bg, 0, 0);
-      };
-    }document.querySelectorAll(".charm-button").forEach(button => {
+    reader.readAsDataURL(file);
+  }
+});
+
+// Reset
+resetBtn.addEventListener("click", () => {
+  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+});
+
+// Add text
+addTextBtn.addEventListener("click", () => {
+  const bubble = document.createElement("div");
+  bubble.className = "text-bubble";
+  bubble.contentEditable = true;
+  bubble.style.left = "80px";
+  bubble.style.top = "100px";
+  caseDiv.appendChild(bubble);
+  bubble.focus();
+  makeTouchDraggable(bubble);
+});
+
+// Handle charm creation
+document.querySelectorAll(".charm-button").forEach(button => {
   button.addEventListener("touchstart", function(e) {
     const emoji = button.dataset.emoji;
     const charm = document.createElement("div");
     charm.className = "charm";
     charm.innerText = emoji;
-
-    const touch = e.touches[0];
-    const caseRect = caseDiv.getBoundingClientRect();
-    const x = touch.clientX - caseRect.left - 20;
-    const y = touch.clientY - caseRect.top - 20;
-
-    charm.style.left = `${x}px`;
-    charm.style.top = `${y}px`;
-
+    charm.style.left = `${e.touches[0].clientX - caseDiv.getBoundingClientRect().left - 20}px`;
+    charm.style.top = `${e.touches[0].clientY - caseDiv.getBoundingClientRect().top - 20}px`;
     caseDiv.appendChild(charm);
     makeTouchDraggable(charm);
   });
 });
 
+// Draggable logic
 function makeTouchDraggable(el) {
   let offsetX = 0;
   let offsetY = 0;
   let lastTap = 0;
+
   el.addEventListener("touchstart", function(e) {
     const now = new Date().getTime();
     if (now - lastTap < 300) {
@@ -201,6 +233,7 @@ function makeTouchDraggable(el) {
       const moveTouch = moveEvent.touches[0];
       let x = moveTouch.clientX - parentRect.left - offsetX;
       let y = moveTouch.clientY - parentRect.top - offsetY;
+
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
     }
@@ -215,42 +248,9 @@ function makeTouchDraggable(el) {
   });
 }
 
-document.getElementById("upload").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "draggable-img";
-      img.style.top = "100px";
-      img.style.left = "80px";
-      img.style.width = "150px";
-      caseDiv.appendChild(img);
-      makeTouchDraggable(img);
-    };
-    reader.readAsDataURL(file);
-  }
-});
-
-document.getElementById("reset").addEventListener("click", () => {
-  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-});
-
-document.getElementById("add-text").addEventListener("click", () => {
-  const bubble = document.createElement("div");
-  bubble.className = "text-bubble";
-  bubble.contentEditable = true;
-  bubble.style.left = "80px";
-  bubble.style.top = "100px";
-  caseDiv.appendChild(bubble);
-  bubble.focus();
-  makeTouchDraggable(bubble);
-});
-
-document.getElementById("done").addEventListener("click", () => {
-  document.getElementById("final-case").innerHTML = caseDiv.innerHTML;
-  document.getElementById("final-view").style.display = "block";
+doneBtn.addEventListener("click", () => {
+  finalCase.innerHTML = caseDiv.innerHTML;
+  finalView.style.display = "block";
   document.querySelector(".layout").style.display = "none";
 });
 
