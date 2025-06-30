@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -44,10 +46,10 @@
       transform-origin: center center;
     }
     .charm {
-      width: 40px;
-      height: 40px;
+      width: 50px;       /* bumped size */
+      height: 50px;      /* bumped size */
       user-select: none;
-      font-size: 30px;
+      font-size: 38px;   /* bumped size */
     }
     .text-bubble {
       background: white;
@@ -57,6 +59,10 @@
       font-size: 16px;
       min-width: 60px;
       min-height: 30px;
+    }
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
     }
     .charm-menu, .basket {
       background: white;
@@ -141,165 +147,178 @@
       galaxyS: "galaxyS.png"
     };
     const model = new URLSearchParams(location.search).get("model");
-    if (model && caseImages[model]) caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;let lastTapTime = 0;
+    if (model && caseImages[model]) caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
 
-function handleDoubleTap(el) {
-  el.addEventListener("pointerdown", e => {
-    const currentTime = new Date().getTime();
-    if (currentTime - lastTapTime < 300) {
-      el.remove();
+    function handleDoubleTap(el) {
+      let lastTapTime = 0;
+      let multiTouchActive = false;
+
+      el.addEventListener("touchstart", (e) => {
+        if (e.touches.length > 1) {
+          multiTouchActive = true;
+        }
+      });
+
+      el.addEventListener("touchend", (e) => {
+        if (multiTouchActive) {
+          // Reset flag and don't count as tap
+          multiTouchActive = false;
+          return;
+        }
+        const currentTime = new Date().getTime();
+        if (currentTime - lastTapTime < 300) {
+          el.remove();
+        }
+        lastTapTime = currentTime;
+      });
     }
-    lastTapTime = currentTime;
-  });
-}
 
-function makeDraggable(el, allowResize = true) {
-  let startX = 0, startY = 0, startDistance = 0, startAngle = 0;
-  let scale = 1, rotation = 0;
-  let initialTouches = [];
+    function makeDraggable(el, allowResize = true) {
+      let startX = 0, startY = 0, startDistance = 0, startAngle = 0;
+      let scale = 1, rotation = 0;
+      let initialTouches = [];
 
-  const updateTransform = () => {
-    el.style.transform = `translate(0, 0) scale(${scale}) rotate(${rotation}deg)`;
-  };
+      const updateTransform = () => {
+        el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+      };
 
-  el.addEventListener("touchstart", e => {
-    if (e.touches.length === 1) {
-      const rect = el.getBoundingClientRect();
-      startX = e.touches[0].clientX - rect.left;
-      startY = e.touches[0].clientY - rect.top;
-    } else if (e.touches.length === 2) {
-      const [t1, t2] = e.touches;
-      startDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      startAngle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
-      initialTouches = [t1.identifier, t2.identifier];
+      el.addEventListener("touchstart", e => {
+        if (e.touches.length === 1) {
+          const rect = el.getBoundingClientRect();
+          startX = e.touches[0].clientX - rect.left;
+          startY = e.touches[0].clientY - rect.top;
+        } else if (e.touches.length === 2) {
+          const [t1, t2] = e.touches;
+          startDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          startAngle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+          initialTouches = [t1.identifier, t2.identifier];
+        }
+      });
+
+      el.addEventListener("touchmove", e => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const parentRect = el.parentElement.getBoundingClientRect();
+          let x = touch.clientX - parentRect.left - startX;
+          let y = touch.clientY - parentRect.top - startY;
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+        } else if (e.touches.length === 2) {
+          const [t1, t2] = e.touches;
+          const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          const angle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+          const deltaAngle = angle - startAngle;
+          const deltaScale = distance / startDistance;
+          if (allowResize) scale *= deltaScale;
+          rotation += deltaAngle * (180 / Math.PI);
+          updateTransform();
+          startDistance = distance;
+          startAngle = angle;
+        }
+      });
+
+      handleDoubleTap(el);
     }
-  });
 
-  el.addEventListener("touchmove", e => {
-    e.preventDefault();
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      const parentRect = el.parentElement.getBoundingClientRect();
-      let x = touch.clientX - parentRect.left - startX;
-      let y = touch.clientY - parentRect.top - startY;
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
-    } else if (e.touches.length === 2) {
-      const [t1, t2] = e.touches;
-      const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const angle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
-      const deltaAngle = angle - startAngle;
-      const deltaScale = distance / startDistance;
-      if (allowResize) scale *= deltaScale;
-      rotation += deltaAngle * (180 / Math.PI);
-      updateTransform();
-      startDistance = distance;
-      startAngle = angle;
-    }
-  });
-
-  handleDoubleTap(el);
-}
-
-document.getElementById("upload").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "draggable-img";
-      img.style.top = "100px";
-      img.style.left = "80px";
-      img.style.width = "150px";
-      caseDiv.appendChild(img);
-      makeDraggable(img, true);
-    };
-    reader.readAsDataURL(file);
-  }
-});
-
-document.getElementById("reset").addEventListener("click", () => {
-  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-});
-
-document.getElementById("add-text").addEventListener("click", () => {
-  const bubble = document.createElement("div");
-  bubble.className = "text-bubble";
-  bubble.contentEditable = true;
-  bubble.style.left = "80px";
-  bubble.style.top = "100px";
-  caseDiv.appendChild(bubble);
-  bubble.focus();
-  makeDraggable(bubble, true);
-});
-
-document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("touchstart", function(e) {
-    e.preventDefault();
-    const emoji = button.dataset.emoji;
-    const charm = document.createElement("div");
-    charm.className = "charm";
-    charm.innerText = emoji;
-    charm.style.position = "fixed";
-    charm.style.zIndex = 1000;
-    document.body.appendChild(charm);
-
-    let isDragging = true;
-    let touchX = e.touches[0].clientX;
-    let touchY = e.touches[0].clientY;
-
-    const updatePosition = () => {
-      if (!isDragging) return;
-      charm.style.left = `${touchX - 20}px`;
-      charm.style.top = `${touchY - 20}px`;
-      requestAnimationFrame(updatePosition);
-    };
-
-    requestAnimationFrame(updatePosition);
-
-    const onTouchMove = (ev) => {
-      touchX = ev.touches[0].clientX;
-      touchY = ev.touches[0].clientY;
-    };
-
-    const onTouchEnd = () => {
-      isDragging = false;
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-
-      const caseRect = caseDiv.getBoundingClientRect();
-      const charmRect = charm.getBoundingClientRect();
-
-      if (
-        charmRect.left < caseRect.right &&
-        charmRect.right > caseRect.left &&
-        charmRect.top < caseRect.bottom &&
-        charmRect.bottom > caseRect.top
-      ) {
-        charm.style.position = "absolute";
-        charm.style.left = `${charmRect.left - caseRect.left}px`;
-        charm.style.top = `${charmRect.top - caseRect.top}px`;
-        charm.style.zIndex = 1;
-        caseDiv.appendChild(charm);
-        makeDraggable(charm, false);
-      } else {
-        charm.remove();
+    document.getElementById("upload").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const img = document.createElement("img");
+          img.src = reader.result;
+          img.className = "draggable-img";
+          img.style.top = "100px";
+          img.style.left = "80px";
+          img.style.width = "150px";
+          caseDiv.appendChild(img);
+          makeDraggable(img, true);
+        };
+        reader.readAsDataURL(file);
       }
-    };
+    });
 
-    document.addEventListener("touchmove", onTouchMove);
-    document.addEventListener("touchend", onTouchEnd);
-  });
-});
+    document.getElementById("reset").addEventListener("click", () => {
+      caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+    });
 
-document.getElementById("done").addEventListener("click", () => {
-  finalCase.innerHTML = caseDiv.innerHTML;
-  finalCase.style.backgroundImage = caseDiv.style.backgroundImage;
-  finalView.style.display = "block";
-  document.querySelector(".layout").style.display = "none";
-});
+    document.getElementById("add-text").addEventListener("click", () => {
+      const bubble = document.createElement("div");
+      bubble.className = "text-bubble";
+      bubble.contentEditable = true;
+      bubble.style.left = "80px";
+      bubble.style.top = "100px";
+      caseDiv.appendChild(bubble);
+      bubble.focus();
+      makeDraggable(bubble, true);
+    });
 
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        const emoji = button.dataset.emoji;
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.innerText = emoji;
+        charm.style.position = "fixed";
+        charm.style.zIndex = 1000;
+        document.body.appendChild(charm);
+
+        let isDragging = true;
+        let touchX = e.touches[0].clientX;
+        let touchY = e.touches[0].clientY;
+
+        const updatePosition = () => {
+          if (!isDragging) return;
+          charm.style.left = `${touchX - 25}px`;
+          charm.style.top = `${touchY - 25}px`;
+          requestAnimationFrame(updatePosition);
+        };
+
+        requestAnimationFrame(updatePosition);
+
+        const onTouchMove = (ev) => {
+          touchX = ev.touches[0].clientX;
+          touchY = ev.touches[0].clientY;
+        };
+
+        const onTouchEnd = () => {
+          isDragging = false;
+          document.removeEventListener("touchmove", onTouchMove);
+          document.removeEventListener("touchend", onTouchEnd);
+
+          const caseRect = caseDiv.getBoundingClientRect();
+          const charmRect = charm.getBoundingClientRect();
+
+          if (
+            charmRect.left < caseRect.right &&
+            charmRect.right > caseRect.left &&
+            charmRect.top < caseRect.bottom &&
+            charmRect.bottom > caseRect.top
+          ) {
+            charm.style.position = "absolute";
+            charm.style.left = `${charmRect.left - caseRect.left}px`;
+            charm.style.top = `${charmRect.top - caseRect.top}px`;
+            charm.style.zIndex = 1;
+            caseDiv.appendChild(charm);
+            makeDraggable(charm, false); // rotate only, no resize
+          } else {
+            charm.remove();
+          }
+        };
+
+        document.addEventListener("touchmove", onTouchMove);
+        document.addEventListener("touchend", onTouchEnd);
+      });
+    });
+
+    document.getElementById("done").addEventListener("click", () => {
+      finalCase.innerHTML = caseDiv.innerHTML;
+      finalCase.style.backgroundImage = caseDiv.style.backgroundImage;
+      finalView.style.display = "block";
+      document.querySelector(".layout").style.display = "none";
+    });
   </script>
 </body>
 </html>
