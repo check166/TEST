@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customize Your Phone Case</title>
+  <style>
+    body {
+      background-color: #ffe6f0;
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .layout {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 20px;
+    }
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .phone-case {
+      width: 300px;
+      height: 550px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .draggable-img, .charm, .text-bubble {
+      position: absolute;
+      touch-action: none;
+    }
+    .charm {
+      width: 40px;
+      height: 40px;
+      user-select: none;
+      font-size: 30px;
+    }
+    .text-bubble {
+      background: white;
+      border-radius: 15px;
+      border: 2px solid #ccc;
+      padding: 5px 10px;
+      font-size: 16px;
+      min-width: 60px;
+      min-height: 30px;
+    }
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
+    }
+    .charm-menu, .basket {
+      background: white;
+      border-radius: 20px;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .charm-button {
+      font-size: 24px;
+      background: #ffe0ed;
+      border: none;
+      border-radius: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .text-tool-btn {
+      font-size: 24px;
+      background-color: #f9f28b;
+      border-radius: 15px;
+      border: none;
+      padding: 10px;
+    }
+    #upload {
+      background-color: #a8e6a3;
+      border-radius: 15px;
+      padding: 10px;
+      border: none;
+    }
+    #reset {
+      background-color: #ff9999;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+    }
+    #done {
+      background-color: #8bb6f2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+    }
+    #final-view {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Customize Your Phone Case</h1>
+  <div class="layout">
+    <div class="left-panel">
+      <div class="phone-case" id="case"></div>
+      <div class="controls">
+        <input type="file" id="upload" accept="image/*" />
+        <button id="reset">Reset</button>
+        <button id="done">Done</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="charm-menu" id="charm-menu">
+        <div class="charm-button" data-emoji="🌸">🌸</div>
+        <div class="charm-button" data-emoji="🎀">🎀</div>
+        <div class="charm-button" data-emoji="🍓">🍓</div>
+        <div class="charm-button" data-emoji="🐰">🐰</div>
+        <div class="charm-button" data-emoji="💛">💛</div>
+      </div>
+      <button class="text-tool-btn" id="add-text">T</button>
+      <div class="basket" id="basket">
+        <div class="charm-button" data-emoji="🔵">🔵</div>
+        <div class="charm-button" data-emoji="🟣">🟣</div>
+        <div class="charm-button" data-emoji="🟢">🟢</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="final-view">
+    <h2>Your Final Design</h2>
+    <div class="phone-case" id="final-case"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const model = params.get("model");
+    const caseDiv = document.getElementById("case");
+    const caseImages = {
+      iphone8: "cases/iphone8.png",
+      iphone14: "cases/iphone14.png",
+      galaxyS: "cases/galaxyS.png"
+    };
+
+    if (model && caseImages[model]) {
+      caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
+    }
+
+    const upload = document.getElementById("upload");
+    const resetBtn = document.getElementById("reset");
+    const addTextBtn = document.getElementById("add-text");
+    const doneBtn = document.getElementById("done");
+    const finalCase = document.getElementById("final-case");
+    const finalView = document.getElementById("final-view");
+
+    let resizing = false;
+
+    upload.addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const img = document.createElement("img");
+          img.src = reader.result;
+          img.className = "draggable-img";
+          img.style.top = "100px";
+          img.style.left = "80px";
+          img.style.width = "150px";
+          caseDiv.appendChild(img);
+          makeTouchDraggable(img, true);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+    });
+
+    addTextBtn.addEventListener("click", () => {
+      const bubble = document.createElement("div");
+      bubble.className = "text-bubble";
+      bubble.contentEditable = true;
+      bubble.style.left = "80px";
+      bubble.style.top = "100px";
+      caseDiv.appendChild(bubble);
+      bubble.focus();
+      makeTouchDraggable(bubble);
+    });
+
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("click", () => {
+        const emoji = button.dataset.emoji;
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.innerText = emoji;
+        charm.style.left = "100px";
+        charm.style.top = "100px";
+        caseDiv.appendChild(charm);
+        makeTouchDraggable(charm);
+      });
+    });
+
+    function makeTouchDraggable(el, isResizable = false) {
+      let offsetX = 0;
+      let offsetY = 0;
+      let lastTap = 0;
+      let startDist = 0;
+      let initialScale = 1;
+
+      el.addEventListener("touchstart", (e) => {
+        if (isResizable && e.touches.length === 2) {
+          resizing = true;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          startDist = Math.sqrt(dx * dx + dy * dy);
+          initialScale = parseFloat(el.style.transform.replace(/[^\d.]/g, '')) || 1;
+          return;
+        }
+
+        const now = new Date().getTime();
+        if (now - lastTap < 300 && !resizing) {
+          el.remove();
+          return;
+        }
+        lastTap = now;
+
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const rect = el.getBoundingClientRect();
+          const parentRect = caseDiv.getBoundingClientRect();
+          offsetX = touch.clientX - rect.left;
+          offsetY = touch.clientY - rect.top;
+
+          function moveTouch(moveEvent) {
+            const moveTouch = moveEvent.touches[0];
+            let x = moveTouch.clientX - parentRect.left - offsetX;
+            let y = moveTouch.clientY - parentRect.top - offsetY;
+
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            if (x > parentRect.width - el.offsetWidth) x = parentRect.width - el.offsetWidth;
+            if (y > parentRect.height - el.offsetHeight) y = parentRect.height - el.offsetHeight;
+
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+          }
+
+          function endTouch() {
+            document.removeEventListener("touchmove", moveTouch);
+            document.removeEventListener("touchend", endTouch);
+            resizing = false;
+          }
+
+          document.addEventListener("touchmove", moveTouch);
+          document.addEventListener("touchend", endTouch);
+        }
+      });
+
+      el.addEventListener("touchmove", (e) => {
+        if (isResizable && e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const scale = dist / startDist * initialScale;
+          el.style.transform = `scale(${scale})`;
+        }
+      });
+    }
+
+    doneBtn.addEventListener("click", () => {
+      finalCase.innerHTML = caseDiv.innerHTML;
+      finalView.style.display = "block";
+      document.querySelector(".layout").style.display = "none";
+    });
+  </script>
+</body>
+</html>
