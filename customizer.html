@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -41,13 +42,13 @@
     .draggable-img, .charm, .text-bubble {
       position: absolute;
       touch-action: none;
-      user-select: none;
     }
     .charm {
       width: 40px;
       height: 40px;
       user-select: none;
       font-size: 30px;
+      transition: transform 0.3s ease;
     }
     .text-bubble {
       background: white;
@@ -57,10 +58,6 @@
       font-size: 16px;
       min-width: 60px;
       min-height: 30px;
-    }
-    .text-transparent {
-      background: transparent !important;
-      border: none !important;
     }
     .charm-menu, .basket {
       background: white;
@@ -127,16 +124,40 @@
       <div class="charm-menu" id="charm-menu">
         <div class="charm-button" data-emoji="🌸">🌸</div>
         <div class="charm-button" data-emoji="🎀">🎀</div>
+        <div class="charm-button" data-emoji="🍓">🍓</div>
+        <div class="charm-button" data-emoji="🐰">🐰</div>
+        <div class="charm-button" data-emoji="💛">💛</div>
+      </div>
+      <button class="text-tool-btn" id="add-text">T</button>
+      <div class="basket" id="basket">
+        <div class="charm-button" data-emoji="🔵">🔵</div>
+        <div class="charm-button" data-emoji="🟣">🟣</div>
+        <div class="charm-button" data-emoji="🟢">🟢</div>
       </div>
     </div>
   </div>
   <div id="final-view">
     <h2>Your Final Design</h2>
     <div class="phone-case" id="final-case"></div>
-  </div>  <script>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const model = params.get("model");
     const caseDiv = document.getElementById("case");
+    const caseImages = {
+      iphone8: "iphone8.png",
+      iphone14: "iphone14.png",
+      galaxyS: "galaxyS.png"
+    };
+
+    if (model && caseImages[model]) {
+      caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
+    }
+
     const upload = document.getElementById("upload");
     const resetBtn = document.getElementById("reset");
+    const addTextBtn = document.getElementById("add-text");
     const doneBtn = document.getElementById("done");
     const finalCase = document.getElementById("final-case");
     const finalView = document.getElementById("final-view");
@@ -153,7 +174,7 @@
           img.style.left = "80px";
           img.style.width = "150px";
           caseDiv.appendChild(img);
-          makeDraggable(img);
+          makeTouchDraggable(img, true);
         };
         reader.readAsDataURL(file);
       }
@@ -163,49 +184,88 @@
       caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
     });
 
+    addTextBtn.addEventListener("click", () => {
+      const bubble = document.createElement("div");
+      bubble.className = "text-bubble";
+      bubble.contentEditable = true;
+      bubble.style.left = "80px";
+      bubble.style.top = "100px";
+      caseDiv.appendChild(bubble);
+      bubble.focus();
+      makeTouchDraggable(bubble);
+    });
+
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("click", (e) => {
+        const emoji = button.dataset.emoji;
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.innerText = emoji;
+        charm.style.left = `130px`;
+        charm.style.top = `230px`;
+        caseDiv.appendChild(charm);
+        makeTouchDraggable(charm, false, button);
+      });
+    });
+
+    function makeTouchDraggable(el, isResizable = false, originButton = null) {
+      let offsetX = 0;
+      let offsetY = 0;
+      let startDist = 0;
+      let initialScale = 1;
+      let dragging = false;
+
+      const parentRect = caseDiv.getBoundingClientRect();
+
+      el.addEventListener("touchstart", (e) => {
+        if (isResizable && e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          startDist = Math.sqrt(dx * dx + dy * dy);
+          initialScale = parseFloat(el.style.transform.replace(/[^\d.]/g, '')) || 1;
+          return;
+        }
+
+        const touch = e.touches[0];
+        const rect = el.getBoundingClientRect();
+        offsetX = touch.clientX - rect.left;
+        offsetY = touch.clientY - rect.top;
+        dragging = true;
+
+        function smoothDrag() {
+          if (!dragging) return;
+          requestAnimationFrame(smoothDrag);
+        }
+        smoothDrag();
+      });
+
+      el.addEventListener("touchmove", (e) => {
+        if (isResizable && e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const scale = dist / startDist * initialScale;
+          el.style.transform = `scale(${scale})`;
+          return;
+        }
+
+        const moveTouch = e.touches[0];
+        const x = moveTouch.clientX - parentRect.left - offsetX;
+        const y = moveTouch.clientY - parentRect.top - offsetY;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      });
+
+      el.addEventListener("touchend", () => {
+        dragging = false;
+      });
+    }
+
     doneBtn.addEventListener("click", () => {
       finalCase.innerHTML = caseDiv.innerHTML;
       finalView.style.display = "block";
       document.querySelector(".layout").style.display = "none";
     });
-
-    document.querySelectorAll(".charm-button").forEach(button => {
-      button.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        const emoji = button.dataset.emoji;
-        const charm = document.createElement("div");
-        charm.className = "charm";
-        charm.innerText = emoji;
-        charm.style.left = `${e.touches[0].clientX - caseDiv.getBoundingClientRect().left - 20}px`;
-        charm.style.top = `${e.touches[0].clientY - caseDiv.getBoundingClientRect().top - 20}px`;
-        caseDiv.appendChild(charm);
-        makeDraggable(charm);
-      }, { passive: false });
-    });
-
-    function makeDraggable(el) {
-      let offsetX = 0, offsetY = 0;
-
-      const onTouchMove = (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        el.style.left = `${touch.clientX - offsetX}px`;
-        el.style.top = `${touch.clientY - offsetY}px`;
-      };
-
-      const onTouchEnd = () => {
-        document.removeEventListener("touchmove", onTouchMove);
-        document.removeEventListener("touchend", onTouchEnd);
-      };
-
-      el.addEventListener("touchstart", (e) => {
-        const touch = e.touches[0];
-        const rect = el.getBoundingClientRect();
-        offsetX = touch.clientX - rect.left;
-        offsetY = touch.clientY - rect.top;
-        document.addEventListener("touchmove", onTouchMove, { passive: false });
-        document.addEventListener("touchend", onTouchEnd);
-      });
-    }
-  </script></body>
+  </script>
+</body>
 </html>
