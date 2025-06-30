@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -61,7 +62,7 @@
       background: transparent !important;
       border: none !important;
     }
-    .charm-menu, .basket {
+    .charm-menu {
       background: white;
       border-radius: 20px;
       padding: 10px;
@@ -135,19 +136,10 @@
     <div class="phone-case" id="final-case"></div>
   </div>
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const model = params.get("model");
     const caseDiv = document.getElementById("case");
     const finalCase = document.getElementById("final-case");
     const finalView = document.getElementById("final-view");
-    const caseImages = {
-      iphone8: "iphone8.png",
-      iphone14: "iphone14.png",
-      galaxyS: "galaxyS.png"
-    };
-    if (model && caseImages[model]) {
-      caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
-    }
+
     document.getElementById("upload").addEventListener("change", function (e) {
       const file = e.target.files[0];
       if (file) {
@@ -165,9 +157,11 @@
         reader.readAsDataURL(file);
       }
     });
+
     document.getElementById("reset").addEventListener("click", () => {
       caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
     });
+
     document.getElementById("add-text").addEventListener("click", () => {
       const bubble = document.createElement("div");
       bubble.className = "text-bubble";
@@ -178,24 +172,28 @@
       bubble.focus();
       makeDraggable(bubble);
     });
+
     document.querySelectorAll(".charm-button").forEach(button => {
-      button.addEventListener("touchstart", function(e) {
+      button.addEventListener("pointerdown", function(e) {
         const emoji = button.dataset.emoji;
         const charm = document.createElement("div");
         charm.className = "charm";
         charm.innerText = emoji;
         charm.style.position = "fixed";
+        charm.style.left = `${e.clientX - 20}px`;
+        charm.style.top = `${e.clientY - 20}px`;
         charm.style.zIndex = 1000;
         document.body.appendChild(charm);
-        const move = (touch) => {
-          charm.style.left = `${touch.clientX - 20}px`;
-          charm.style.top = `${touch.clientY - 20}px`;
+
+        const onPointerMove = (ev) => {
+          charm.style.left = `${ev.clientX - 20}px`;
+          charm.style.top = `${ev.clientY - 20}px`;
         };
-        move(e.touches[0]);
-        const onTouchMove = (ev) => move(ev.touches[0]);
-        const onTouchEnd = () => {
-          document.removeEventListener("touchmove", onTouchMove);
-          document.removeEventListener("touchend", onTouchEnd);
+
+        const onPointerUp = (ev) => {
+          document.removeEventListener("pointermove", onPointerMove);
+          document.removeEventListener("pointerup", onPointerUp);
+
           const caseRect = caseDiv.getBoundingClientRect();
           const charmRect = charm.getBoundingClientRect();
           if (
@@ -214,34 +212,41 @@
             charm.remove();
           }
         };
-        document.addEventListener("touchmove", onTouchMove);
-        document.addEventListener("touchend", onTouchEnd);
+
+        document.addEventListener("pointermove", onPointerMove);
+        document.addEventListener("pointerup", onPointerUp);
       });
     });
+
     function makeDraggable(el) {
       let offsetX = 0;
       let offsetY = 0;
-      el.addEventListener("touchstart", (e) => {
-        const touch = e.touches[0];
+
+      const onPointerDown = (e) => {
         const rect = el.getBoundingClientRect();
         const parentRect = el.parentElement.getBoundingClientRect();
-        offsetX = touch.clientX - rect.left;
-        offsetY = touch.clientY - rect.top;
-        function moveTouch(moveEvent) {
-          const moveTouch = moveEvent.touches[0];
-          let x = moveTouch.clientX - parentRect.left - offsetX;
-          let y = moveTouch.clientY - parentRect.top - offsetY;
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        const move = (ev) => {
+          const x = ev.clientX - parentRect.left - offsetX;
+          const y = ev.clientY - parentRect.top - offsetY;
           el.style.left = `${x}px`;
           el.style.top = `${y}px`;
-        }
-        function endTouch() {
-          document.removeEventListener("touchmove", moveTouch);
-          document.removeEventListener("touchend", endTouch);
-        }
-        document.addEventListener("touchmove", moveTouch);
-        document.addEventListener("touchend", endTouch);
-      });
+        };
+
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+        };
+
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up);
+      };
+
+      el.addEventListener("pointerdown", onPointerDown);
     }
+
     document.getElementById("done").addEventListener("click", () => {
       finalCase.innerHTML = caseDiv.innerHTML;
       finalView.style.display = "block";
