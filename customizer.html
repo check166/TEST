@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -41,7 +42,6 @@
     .draggable-img, .charm, .text-bubble {
       position: absolute;
       touch-action: none;
-      transition: left 0.05s linear, top 0.05s linear; /* Add smoothing */
     }
     .charm {
       width: 40px;
@@ -58,7 +58,11 @@
       min-width: 60px;
       min-height: 30px;
     }
-    .charm-menu {
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
+    }
+    .charm-menu, .basket {
       background: white;
       border-radius: 20px;
       padding: 10px;
@@ -131,6 +135,7 @@
     <h2>Your Final Design</h2>
     <div class="phone-case" id="final-case"></div>
   </div>
+
   <script>
     const params = new URLSearchParams(window.location.search);
     const model = params.get("model");
@@ -144,116 +149,134 @@
     };
     if (model && caseImages[model]) {
       caseDiv.style.backgroundImage = `url('${caseImages[model]}')`;
-    }document.getElementById("upload").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "draggable-img";
-      img.style.top = "100px";
-      img.style.left = "80px";
-      img.style.width = "150px";
-      caseDiv.appendChild(img);
-      makeDraggable(img);
-    };
-    reader.readAsDataURL(file);
-  }
-});
+    }
 
-document.getElementById("reset").addEventListener("click", () => {
-  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-});
-
-document.getElementById("add-text").addEventListener("click", () => {
-  const bubble = document.createElement("div");
-  bubble.className = "text-bubble";
-  bubble.contentEditable = true;
-  bubble.style.left = "80px";
-  bubble.style.top = "100px";
-  caseDiv.appendChild(bubble);
-  bubble.focus();
-  makeDraggable(bubble);
-});
-
-document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("touchstart", function(e) {
-    const emoji = button.dataset.emoji;
-    const charm = document.createElement("div");
-    charm.className = "charm";
-    charm.innerText = emoji;
-    charm.style.position = "fixed";
-    charm.style.zIndex = 1000;
-    document.body.appendChild(charm);
-
-    const move = (touch) => {
-      charm.style.left = `${touch.clientX - 20}px`;
-      charm.style.top = `${touch.clientY - 20}px`;
-    };
-    move(e.touches[0]);
-
-    const onTouchMove = (ev) => move(ev.touches[0]);
-    const onTouchEnd = () => {
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-
-      const caseRect = caseDiv.getBoundingClientRect();
-      const charmRect = charm.getBoundingClientRect();
-      if (
-        charmRect.left < caseRect.right &&
-        charmRect.right > caseRect.left &&
-        charmRect.top < caseRect.bottom &&
-        charmRect.bottom > caseRect.top
-      ) {
-        charm.style.position = "absolute";
-        charm.style.left = `${charmRect.left - caseRect.left}px`;
-        charm.style.top = `${charmRect.top - caseRect.top}px`;
-        charm.style.zIndex = 1;
-        caseDiv.appendChild(charm);
-        makeDraggable(charm);
-      } else {
-        charm.remove();
+    document.getElementById("upload").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const img = document.createElement("img");
+          img.src = reader.result;
+          img.className = "draggable-img";
+          img.style.top = "100px";
+          img.style.left = "80px";
+          img.style.width = "150px";
+          caseDiv.appendChild(img);
+          makeDraggable(img);
+        };
+        reader.readAsDataURL(file);
       }
-    };
+    });
 
-    document.addEventListener("touchmove", onTouchMove);
-    document.addEventListener("touchend", onTouchEnd);
-  });
-});
+    document.getElementById("reset").addEventListener("click", () => {
+      caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+    });
 
-function makeDraggable(el) {
-  let offsetX = 0;
-  let offsetY = 0;
-  el.addEventListener("touchstart", (e) => {
-    const touch = e.touches[0];
-    const rect = el.getBoundingClientRect();
-    const parentRect = el.parentElement.getBoundingClientRect();
-    offsetX = touch.clientX - rect.left;
-    offsetY = touch.clientY - rect.top;
+    document.getElementById("add-text").addEventListener("click", () => {
+      const bubble = document.createElement("div");
+      bubble.className = "text-bubble";
+      bubble.contentEditable = true;
+      bubble.style.left = "80px";
+      bubble.style.top = "100px";
+      caseDiv.appendChild(bubble);
+      bubble.focus();
+      makeDraggable(bubble);
+    });
 
-    function moveTouch(moveEvent) {
-      const moveTouch = moveEvent.touches[0];
-      let x = moveTouch.clientX - parentRect.left - offsetX;
-      let y = moveTouch.clientY - parentRect.top - offsetY;
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        const emoji = button.dataset.emoji;
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.innerText = emoji;
+        charm.style.position = "fixed";
+        charm.style.zIndex = 1000;
+        document.body.appendChild(charm);
+
+        let isDragging = true;
+        let touchX = e.touches[0].clientX;
+        let touchY = e.touches[0].clientY;
+
+        const updatePosition = () => {
+          if (!isDragging) return;
+          charm.style.left = `${touchX - 20}px`;
+          charm.style.top = `${touchY - 20}px`;
+          requestAnimationFrame(updatePosition);
+        };
+
+        requestAnimationFrame(updatePosition);
+
+        const onTouchMove = (ev) => {
+          touchX = ev.touches[0].clientX;
+          touchY = ev.touches[0].clientY;
+        };
+
+        const onTouchEnd = () => {
+          isDragging = false;
+          document.removeEventListener("touchmove", onTouchMove);
+          document.removeEventListener("touchend", onTouchEnd);
+
+          const caseRect = caseDiv.getBoundingClientRect();
+          const charmRect = charm.getBoundingClientRect();
+
+          if (
+            charmRect.left < caseRect.right &&
+            charmRect.right > caseRect.left &&
+            charmRect.top < caseRect.bottom &&
+            charmRect.bottom > caseRect.top
+          ) {
+            charm.style.position = "absolute";
+            charm.style.left = `${charmRect.left - caseRect.left}px`;
+            charm.style.top = `${charmRect.top - caseRect.top}px`;
+            charm.style.zIndex = 1;
+            caseDiv.appendChild(charm);
+            makeDraggable(charm);
+          } else {
+            charm.remove();
+          }
+        };
+
+        document.addEventListener("touchmove", onTouchMove);
+        document.addEventListener("touchend", onTouchEnd);
+      });
+    });
+
+    function makeDraggable(el) {
+      let offsetX = 0;
+      let offsetY = 0;
+      el.addEventListener("touchstart", (e) => {
+        const touch = e.touches[0];
+        const rect = el.getBoundingClientRect();
+        const parentRect = el.parentElement.getBoundingClientRect();
+        offsetX = touch.clientX - rect.left;
+        offsetY = touch.clientY - rect.top;
+
+        function moveTouch(moveEvent) {
+          const moveTouch = moveEvent.touches[0];
+          let x = moveTouch.clientX - parentRect.left - offsetX;
+          let y = moveTouch.clientY - parentRect.top - offsetY;
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+        }
+
+        function endTouch() {
+          document.removeEventListener("touchmove", moveTouch);
+          document.removeEventListener("touchend", endTouch);
+        }
+
+        document.addEventListener("touchmove", moveTouch);
+        document.addEventListener("touchend", endTouch);
+      });
     }
-    function endTouch() {
-      document.removeEventListener("touchmove", moveTouch);
-      document.removeEventListener("touchend", endTouch);
-    }
-    document.addEventListener("touchmove", moveTouch);
-    document.addEventListener("touchend", endTouch);
-  });
-}
 
-document.getElementById("done").addEventListener("click", () => {
-  finalCase.innerHTML = caseDiv.innerHTML;
-  finalView.style.display = "block";
-  document.querySelector(".layout").style.display = "none";
-});
-
+    document.getElementById("done").addEventListener("click", () => {
+      finalCase.innerHTML = caseDiv.innerHTML;
+      finalCase.style.backgroundImage = caseDiv.style.backgroundImage;
+      finalView.style.display = "block";
+      document.querySelector(".layout").style.display = "none";
+    });
   </script>
 </body>
 </html>
