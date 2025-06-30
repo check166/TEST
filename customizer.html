@@ -1,4 +1,3 @@
-
 <!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -38,18 +37,16 @@
       position: relative;
       overflow: hidden;
       touch-action: none;
-      border: 2px solid #ccc;
-      border-radius: 10px;
     }
     .draggable-img, .charm, .text-bubble {
       position: absolute;
       touch-action: none;
       user-select: none;
-      transform-origin: center center;
     }
     .charm {
       width: 40px;
       height: 40px;
+      user-select: none;
       font-size: 30px;
     }
     .text-bubble {
@@ -60,6 +57,20 @@
       font-size: 16px;
       min-width: 60px;
       min-height: 30px;
+    }
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
+    }
+    .charm-menu, .basket {
+      background: white;
+      border-radius: 20px;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 10px;
     }
     .charm-button {
       font-size: 24px;
@@ -108,145 +119,93 @@
       <div class="phone-case" id="case"></div>
       <div class="controls">
         <input type="file" id="upload" accept="image/*" />
-        <button id="add-text" class="text-tool-btn">Add Text</button>
         <button id="reset">Reset</button>
         <button id="done">Done</button>
       </div>
     </div>
     <div class="right-panel">
-      <button class="charm-button" data-emoji="🌸">🌸</button>
-      <button class="charm-button" data-emoji="🎀">🎀</button>
+      <div class="charm-menu" id="charm-menu">
+        <div class="charm-button" data-emoji="🌸">🌸</div>
+        <div class="charm-button" data-emoji="🎀">🎀</div>
+      </div>
     </div>
   </div>
   <div id="final-view">
     <h2>Your Final Design</h2>
     <div class="phone-case" id="final-case"></div>
-  </div>
-  <script>
+  </div>  <script>
     const caseDiv = document.getElementById("case");
+    const upload = document.getElementById("upload");
+    const resetBtn = document.getElementById("reset");
+    const doneBtn = document.getElementById("done");
     const finalCase = document.getElementById("final-case");
-    const finalView = document.getElementById("final-view");function makeDraggable(el, resizable = false, rotatable = true) {
-  let offsetX, offsetY, startDist = 0, startAngle = 0, startRotation = 0, startScale = 1;
-  let lastTap = 0;
+    const finalView = document.getElementById("final-view");
 
-  const onTouchStart = (e) => {
-    const now = new Date().getTime();
-    if (now - lastTap < 300) {
-      el.remove();
-      return;
+    upload.addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const img = document.createElement("img");
+          img.src = reader.result;
+          img.className = "draggable-img";
+          img.style.top = "100px";
+          img.style.left = "80px";
+          img.style.width = "150px";
+          caseDiv.appendChild(img);
+          makeDraggable(img);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
+    });
+
+    doneBtn.addEventListener("click", () => {
+      finalCase.innerHTML = caseDiv.innerHTML;
+      finalView.style.display = "block";
+      document.querySelector(".layout").style.display = "none";
+    });
+
+    document.querySelectorAll(".charm-button").forEach(button => {
+      button.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        const emoji = button.dataset.emoji;
+        const charm = document.createElement("div");
+        charm.className = "charm";
+        charm.innerText = emoji;
+        charm.style.left = `${e.touches[0].clientX - caseDiv.getBoundingClientRect().left - 20}px`;
+        charm.style.top = `${e.touches[0].clientY - caseDiv.getBoundingClientRect().top - 20}px`;
+        caseDiv.appendChild(charm);
+        makeDraggable(charm);
+      }, { passive: false });
+    });
+
+    function makeDraggable(el) {
+      let offsetX = 0, offsetY = 0;
+
+      const onTouchMove = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        el.style.left = `${touch.clientX - offsetX}px`;
+        el.style.top = `${touch.clientY - offsetY}px`;
+      };
+
+      const onTouchEnd = () => {
+        document.removeEventListener("touchmove", onTouchMove);
+        document.removeEventListener("touchend", onTouchEnd);
+      };
+
+      el.addEventListener("touchstart", (e) => {
+        const touch = e.touches[0];
+        const rect = el.getBoundingClientRect();
+        offsetX = touch.clientX - rect.left;
+        offsetY = touch.clientY - rect.top;
+        document.addEventListener("touchmove", onTouchMove, { passive: false });
+        document.addEventListener("touchend", onTouchEnd);
+      });
     }
-    lastTap = now;
-
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      const rect = el.getBoundingClientRect();
-      const parentRect = caseDiv.getBoundingClientRect();
-      offsetX = touch.clientX - rect.left;
-      offsetY = touch.clientY - rect.top;
-
-      const moveTouch = (moveEvent) => {
-        const moveTouch = moveEvent.touches[0];
-        const x = moveTouch.clientX - parentRect.left - offsetX;
-        const y = moveTouch.clientY - parentRect.top - offsetY;
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-      };
-
-      const endTouch = () => {
-        document.removeEventListener("touchmove", moveTouch);
-        document.removeEventListener("touchend", endTouch);
-      };
-
-      document.addEventListener("touchmove", moveTouch);
-      document.addEventListener("touchend", endTouch);
-    } else if (e.touches.length === 2 && resizable) {
-      const [t1, t2] = e.touches;
-      const dx = t2.clientX - t1.clientX;
-      const dy = t2.clientY - t1.clientY;
-      startDist = Math.sqrt(dx * dx + dy * dy);
-      startAngle = Math.atan2(dy, dx);
-      const transform = el.style.transform || "scale(1) rotate(0deg)";
-      const match = /scale([^)]+).*rotate([^)]+)deg/.exec(transform);
-      startScale = parseFloat(match?.[1] || 1);
-      startRotation = parseFloat(match?.[2] || 0);
-
-      const rotateResize = (moveEvent) => {
-        const [m1, m2] = moveEvent.touches;
-        const dx = m2.clientX - m1.clientX;
-        const dy = m2.clientY - m1.clientY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const scale = dist / startDist * startScale;
-        const angle = Math.atan2(dy, dx);
-        const rotation = startRotation + (angle - startAngle) * 180 / Math.PI;
-        el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
-      };
-
-      const endGesture = () => {
-        document.removeEventListener("touchmove", rotateResize);
-        document.removeEventListener("touchend", endGesture);
-      };
-
-      document.addEventListener("touchmove", rotateResize);
-      document.addEventListener("touchend", endGesture);
-    }
-  };
-
-  el.addEventListener("touchstart", onTouchStart);
-}
-
-document.querySelectorAll(".charm-button").forEach(button => {
-  button.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    const emoji = button.dataset.emoji;
-    const charm = document.createElement("div");
-    charm.className = "charm";
-    charm.innerText = emoji;
-    charm.style.left = `${e.touches[0].clientX - caseDiv.getBoundingClientRect().left - 20}px`;
-    charm.style.top = `${e.touches[0].clientY - caseDiv.getBoundingClientRect().top - 20}px`;
-    caseDiv.appendChild(charm);
-    makeDraggable(charm, false);
-  });
-});
-
-document.getElementById("upload").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "draggable-img";
-      img.style.top = "100px";
-      img.style.left = "80px";
-      img.style.width = "150px";
-      caseDiv.appendChild(img);
-      makeDraggable(img, true);
-    };
-    reader.readAsDataURL(file);
-  }
-});
-
-document.getElementById("add-text").addEventListener("click", () => {
-  const bubble = document.createElement("div");
-  bubble.className = "text-bubble";
-  bubble.contentEditable = true;
-  bubble.style.left = "80px";
-  bubble.style.top = "100px";
-  caseDiv.appendChild(bubble);
-  bubble.focus();
-  makeDraggable(bubble, true);
-});
-
-document.getElementById("reset").addEventListener("click", () => {
-  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-});
-
-document.getElementById("done").addEventListener("click", () => {
-  finalCase.innerHTML = caseDiv.innerHTML;
-  finalView.style.display = "block";
-  document.querySelector(".layout").style.display = "none";
-});
-
-  </script>
-</body>
+  </script></body>
 </html>
