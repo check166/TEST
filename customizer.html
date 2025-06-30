@@ -35,6 +35,7 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      background-color: transparent;
       position: relative;
       overflow: hidden;
       touch-action: none;
@@ -283,6 +284,7 @@
 
     doneBtn.addEventListener("click", () => {
       finalCase.innerHTML = caseDiv.innerHTML;
+      finalCase.style.backgroundImage = caseDiv.style.backgroundImage;
       finalView.style.display = "block";
       document.querySelector(".layout").style.display = "none";
     });
