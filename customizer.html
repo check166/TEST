@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -32,30 +31,22 @@
     .phone-case {
       width: 300px;
       height: 550px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
       position: relative;
       overflow: hidden;
       touch-action: none;
-      background: repeating-conic-gradient(#ddd 0% 25%, transparent 0% 50%) 50% / 20px 20px;
-    }
-    .phone-case img.bg-case {
-      width: 100%;
-      height: auto;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-      pointer-events: none;
     }
     .draggable-img, .charm, .text-bubble {
       position: absolute;
       touch-action: none;
-      z-index: 1;
     }
     .charm {
       width: 40px;
       height: 40px;
-      font-size: 30px;
       user-select: none;
+      font-size: 30px;
     }
     .text-bubble {
       background: white;
@@ -65,6 +56,10 @@
       font-size: 16px;
       min-width: 60px;
       min-height: 30px;
+    }
+    .text-transparent {
+      background: transparent !important;
+      border: none !important;
     }
     .charm-menu, .basket {
       background: white;
@@ -83,7 +78,6 @@
       border-radius: 10px;
       padding: 5px 10px;
       cursor: pointer;
-      touch-action: none;
     }
     .text-tool-btn {
       font-size: 24px;
@@ -138,154 +132,65 @@
       </div>
       <button class="text-tool-btn" id="add-text">T</button>
       <div class="basket" id="basket">
-        <div class="charm-button" data-emoji="🔵">🔵</div>
-        <div class="charm-button" data-emoji="🟣">🟣</div>
-        <div class="charm-button" data-emoji="🟢">🟢</div>
+        <div class="charm-button" data-emoji="🔸">🔸</div>
+        <div class="charm-button" data-emoji="🕣">🕣</div>
+        <div class="charm-button" data-emoji="🕲">🕲</div>
       </div>
     </div>
   </div>
-
   <div id="final-view">
     <h2>Your Final Design</h2>
     <div class="phone-case" id="final-case"></div>
   </div>
-
+  <canvas id="case-canvas" style="display:none;"></canvas>
   <script>
     const params = new URLSearchParams(window.location.search);
     const model = params.get("model");
     const caseDiv = document.getElementById("case");
-    const caseImages = {
-      iphone8: "iphone8.png",
-      iphone14: "iphone14.png",
-      galaxyS: "galaxyS.png"
+    const caseCanvas = document.getElementById("case-canvas");
+    const ctx = caseCanvas.getContext("2d");const caseImages = {
+  iphone8: "iphone8.png",
+  iphone14: "iphone14.png",
+  galaxyS: "galaxyS.png"
+};
+
+if (model && caseImages[model]) {
+  const bgSrc = caseImages[model];
+  caseDiv.style.backgroundImage = `url('${bgSrc}')`;
+  const img = new Image();
+  img.src = bgSrc;
+  img.onload = () => {
+    caseCanvas.width = img.width;
+    caseCanvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+  };
+}
+
+const upload = document.getElementById("upload");
+const resetBtn = document.getElementById("reset");
+const addTextBtn = document.getElementById("add-text");
+const doneBtn = document.getElementById("done");
+const finalCase = document.getElementById("final-case");
+const finalView = document.getElementById("final-view");
+
+upload.addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const img = document.createElement("img");
+      img.src = reader.result;
+      img.className = "draggable-img";
+      img.style.top = "100px";
+      img.style.left = "80px";
+      img.style.width = "150px";
+      caseDiv.appendChild(img);
+      makeTouchDraggable(img, true);
     };
+    reader.readAsDataURL(file);
+  }
+});
 
-    if (model && caseImages[model]) {
-      const bg = document.createElement("img");
-      bg.src = caseImages[model];
-      bg.className = "bg-case";
-      bg.alt = "Case";
-      caseDiv.appendChild(bg);
-    }
+resetBtn.addEventListener("click", () => {
+  caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").for
 
-    document.getElementById("upload").addEventListener("change", function (e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          const img = document.createElement("img");
-          img.src = reader.result;
-          img.className = "draggable-img";
-          img.style.left = "80px";
-          img.style.top = "100px";
-          img.style.width = "150px";
-          caseDiv.appendChild(img);
-          makeTouchDraggable(img, true);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    document.getElementById("reset").addEventListener("click", () => {
-      caseDiv.querySelectorAll(".draggable-img, .charm, .text-bubble").forEach(e => e.remove());
-    });
-
-    document.getElementById("add-text").addEventListener("click", () => {
-      const bubble = document.createElement("div");
-      bubble.className = "text-bubble";
-      bubble.contentEditable = true;
-      bubble.style.left = "80px";
-      bubble.style.top = "100px";
-      caseDiv.appendChild(bubble);
-      bubble.focus();
-      makeTouchDraggable(bubble);
-    });
-
-    const charmButtons = document.querySelectorAll(".charm-button");
-    charmButtons.forEach(btn => {
-      btn.addEventListener("touchstart", (e) => {
-        const emoji = btn.dataset.emoji;
-        const charm = document.createElement("div");
-        charm.className = "charm";
-        charm.textContent = emoji;
-        charm.style.left = "100px";
-        charm.style.top = "100px";
-        caseDiv.appendChild(charm);
-        let touch = e.touches[0];
-        let x = touch.clientX;
-        let y = touch.clientY;
-        const caseRect = caseDiv.getBoundingClientRect();
-        charm.style.left = (x - caseRect.left - 20) + "px";
-        charm.style.top = (y - caseRect.top - 20) + "px";
-
-        function move(event) {
-          let t = event.touches[0];
-          let newX = t.clientX - caseRect.left - 20;
-          let newY = t.clientY - caseRect.top - 20;
-          charm.style.left = newX + "px";
-          charm.style.top = newY + "px";
-        }
-
-        function stop() {
-          document.removeEventListener("touchmove", move);
-          document.removeEventListener("touchend", stop);
-          makeTouchDraggable(charm); // Reusable later
-        }
-
-        document.addEventListener("touchmove", move);
-        document.addEventListener("touchend", stop);
-      }, { passive: true });
-    });
-
-    function makeTouchDraggable(el, isResizable = false) {
-      let offsetX = 0;
-      let offsetY = 0;
-      let resizing = false;
-      let lastTap = 0;
-
-      el.addEventListener("touchstart", (e) => {
-        if (e.touches.length === 2 && isResizable) {
-          resizing = true;
-          return;
-        }
-
-        const now = new Date().getTime();
-        if (now - lastTap < 300) {
-          el.remove();
-          return;
-        }
-        lastTap = now;
-
-        const rect = el.getBoundingClientRect();
-        const parentRect = caseDiv.getBoundingClientRect();
-        const touch = e.touches[0];
-        offsetX = touch.clientX - rect.left;
-        offsetY = touch.clientY - rect.top;
-
-        function moveTouch(me) {
-          const moveTouch = me.touches[0];
-          let x = moveTouch.clientX - parentRect.left - offsetX;
-          let y = moveTouch.clientY - parentRect.top - offsetY;
-          el.style.left = `${x}px`;
-          el.style.top = `${y}px`;
-        }
-
-        function endTouch() {
-          document.removeEventListener("touchmove", moveTouch);
-          document.removeEventListener("touchend", endTouch);
-        }
-
-        document.addEventListener("touchmove", moveTouch);
-        document.addEventListener("touchend", endTouch);
-      });
-    }
-
-    document.getElementById("done").addEventListener("click", () => {
-      const finalCase = document.getElementById("final-case");
-      finalCase.innerHTML = caseDiv.innerHTML;
-      document.getElementById("final-view").style.display = "block";
-      document.querySelector(".layout").style.display = "none";
-    });
-  </script>
-</body>
-</html>
