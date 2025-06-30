@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Customize Your Phone Case</title>
   <style>
-    body {
+    body 
       background-color: #ffe6f0;
       font-family: sans-serif;
       text-align: center;
@@ -57,10 +57,6 @@
       font-size: 16px;
       min-width: 60px;
       min-height: 30px;
-    }
-    .text-transparent {
-      background: transparent !important;
-      border: none !important;
     }
     .charm-menu, .basket {
       background: white;
@@ -202,17 +198,14 @@
         const charm = document.createElement("div");
         charm.className = "charm";
         charm.innerText = emoji;
-        const rect = caseDiv.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        charm.style.left = `${x}px`;
-        charm.style.top = `${y}px`;
+        charm.style.left = `130px`;
+        charm.style.top = `230px`;
         caseDiv.appendChild(charm);
-        makeTouchDraggable(charm, false, { x, y });
+        makeTouchDraggable(charm);
       });
     });
 
-    function makeTouchDraggable(el, isResizable = false, originPos = null) {
+    function makeTouchDraggable(el, isResizable = false) {
       let offsetX = 0;
       let offsetY = 0;
       let startDist = 0;
@@ -235,8 +228,8 @@
 
         function moveTouch(moveEvent) {
           const moveTouch = moveEvent.touches[0];
-          const x = moveTouch.clientX - parentRect.left - offsetX;
-          const y = moveTouch.clientY - parentRect.top - offsetY;
+          let x = moveTouch.clientX - parentRect.left - offsetX;
+          let y = moveTouch.clientY - parentRect.top - offsetY;
           el.style.left = `${x}px`;
           el.style.top = `${y}px`;
         }
@@ -244,19 +237,6 @@
         function endTouch() {
           document.removeEventListener("touchmove", moveTouch);
           document.removeEventListener("touchend", endTouch);
-
-          if (originPos) {
-            const newX = parseFloat(el.style.left);
-            const newY = parseFloat(el.style.top);
-            if (newX < 0 || newY < 0 || newX > caseDiv.clientWidth - el.offsetWidth || newY > caseDiv.clientHeight - el.offsetHeight) {
-              const dx = originPos.x - newX;
-              const dy = originPos.y - newY;
-              el.style.transform = `translate(${dx}px, ${dy}px)`;
-              setTimeout(() => el.remove(), 300);
-            } else {
-              el.style.transform = "";
-            }
-          }
         }
 
         document.addEventListener("touchmove", moveTouch);
