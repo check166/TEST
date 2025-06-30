@@ -38,7 +38,7 @@
     }
     .phone-case img.bg-case {
       width: 100%;
-      height: 100%;
+      height: auto;
       position: absolute;
       top: 0;
       left: 0;
@@ -213,7 +213,7 @@
     });
 
     document.querySelectorAll(".charm-button").forEach(button => {
-      button.addEventListener("click", () => {
+      button.addEventListener("touchstart", (e) => {
         const emoji = button.dataset.emoji;
         const charm = document.createElement("div");
         charm.className = "charm";
@@ -221,7 +221,27 @@
         charm.style.left = "100px";
         charm.style.top = "100px";
         caseDiv.appendChild(charm);
-        makeTouchDraggable(charm);
+
+        const touch = e.touches[0];
+        const parentRect = caseDiv.getBoundingClientRect();
+        charm.style.left = `${touch.clientX - parentRect.left - 20}px`;
+        charm.style.top = `${touch.clientY - parentRect.top - 20}px`;
+
+        function moveTouch(moveEvent) {
+          const moveTouch = moveEvent.touches[0];
+          const x = moveTouch.clientX - parentRect.left - 20;
+          const y = moveTouch.clientY - parentRect.top - 20;
+          charm.style.left = `${x}px`;
+          charm.style.top = `${y}px`;
+        }
+
+        function endTouch() {
+          document.removeEventListener("touchmove", moveTouch);
+          document.removeEventListener("touchend", endTouch);
+        }
+
+        document.addEventListener("touchmove", moveTouch);
+        document.addEventListener("touchend", endTouch);
       });
     });
 
